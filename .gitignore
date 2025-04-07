@@ -1,0 +1,24 @@
+# Ignore node modules for both frontend and backend
+**/node_modules/
+
+# Ignore .env files
+**/.env
+
+# Ignore Puppeteer user data
+server/user-data/
+
+# VSCode settings
+.vscode/
+
+# Log files
+*.log
+
+# macOS system files
+.DS_Store
+
+# Ignore screenshots and cache
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.cache
