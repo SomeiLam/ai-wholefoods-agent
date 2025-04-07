@@ -7,7 +7,7 @@ import {
   Store,
   X,
 } from 'lucide-react'
-import { GroceryItem } from './GroceryInput'
+import { GroceryItem } from '../types'
 
 interface ShoppingListProps {
   items: GroceryItem[]
