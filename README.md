@@ -96,4 +96,4 @@ MIT
 
 ---
 
-> Created with ☕️ and AI by [your-name](https://github.com/your-username)
+> Created with ☕️ and AI by [Amy](https://github.com/SomeiLam)
