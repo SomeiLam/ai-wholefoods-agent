@@ -27,7 +27,7 @@ if (itemHandles.length === 0) {
 }
 
 const results = await page.$$eval('.s-main-slot .s-result-item', items => {
-  return items.slice(0, 5).map(item => {
+  return items.slice(0, 10).map(item => {
     const anchor = item.querySelector('a.a-link-normal[href*="/dp/"]') as HTMLAnchorElement;
     const brandSpan = item.querySelector('h2 .a-size-base-plus') as HTMLElement;
     const titleSpan = item.querySelector('a h2[aria-label] span') as HTMLElement;

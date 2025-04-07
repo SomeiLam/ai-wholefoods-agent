@@ -1,16 +1,16 @@
-// index.ts
 import express from 'express';
 import puppeteer, { type Browser } from 'puppeteer';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
-import fs from 'fs';
 import path from 'path';
 
 import { GroceryItem } from './types/GroceryItem';
 import { searchAmazon } from './automation/searchAmazon';
 import { askAIForBestMatch } from './agent/askAIForBestMatch';
 import { addToCart } from './automation/addToCart';
+import { waitUntilLoggedIn } from './utils/waitUntilLoggedIn';
+import { checkIfLoggedIn } from './utils/checkIfLoggedIn';
 
 dotenv.config();
 
@@ -22,13 +22,6 @@ app.use(bodyParser.json());
 
 // Set Puppeteer user data dir
 const userDataDir = path.join(__dirname, 'user-data');
-const lockFilePath = path.join(userDataDir, 'SingletonLock');
-
-// 🧹 Clear Puppeteer lock file
-if (fs.existsSync(lockFilePath)) {
-  fs.unlinkSync(lockFilePath);
-  console.log('🧼 Removed leftover SingletonLock');
-}
 
 app.post('/api/submit-groceries', async (req, res) => {
   const items: GroceryItem[] = req.body.items;
@@ -44,6 +37,23 @@ app.post('/api/submit-groceries', async (req, res) => {
 
     const [page] = await browser.pages();
     await page.goto('https://www.amazon.com/wholefoods');
+    console.log('🌐 Opened Amazon Whole Foods landing page');
+
+    // ✅ Check if already logged in
+    const isLoggedIn = await checkIfLoggedIn(page);
+
+    if (!isLoggedIn) {
+      // 🔐 Not logged in → Navigate to login
+      await page.waitForSelector('#nav-link-accountList');
+      await page.click('#nav-link-accountList');
+      console.log('🔐 Navigating to sign-in page...');
+
+      await waitUntilLoggedIn(page);
+      console.log('✅ Login confirmed, continuing automation...');
+      
+      await page.goto('https://www.amazon.com/wholefoods');
+    }
+
     await page.waitForSelector('#twotabsearchtextbox');
 
     for (const item of items) {
@@ -58,6 +68,8 @@ app.post('/api/submit-groceries', async (req, res) => {
         if (item.preferences.country) enhancedQuery += ` from ${item.preferences.country}`;
         if (item.preferences.lowestPrice) enhancedQuery += ' cheapest';
 
+        const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(enhancedQuery)}&i=wholefoods`;
+        await page.goto(searchUrl, { waitUntil: 'networkidle2' });
         const searchResults = await searchAmazon(page, enhancedQuery);
 
         if (searchResults.length === 0) {
@@ -70,6 +82,16 @@ app.post('/api/submit-groceries', async (req, res) => {
           preferences: item.preferences,
           productList: searchResults.slice(0, 10),
         });
+        console.log('bestMatch', bestMatch);
+        if (!bestMatch || bestMatch.href === '') {
+          console.warn(`🛑 Skipping "${item.name}" — no valid product match`);
+          result.push({
+            item: item,
+            status: 'skipped',
+            reason: bestMatch?.reason || 'No matching product found',
+          });
+          continue; // 🚫 Skip the rest of the loop
+        }        
 
         if (!bestMatch) {
           throw new Error('AI could not choose a best match.');
@@ -82,26 +104,26 @@ app.post('/api/submit-groceries', async (req, res) => {
         const success = await addToCart(page, item.quantity);
         if (success) {
           result.push({
-            name: item.name,
-            quantity: item.quantity,
+            item: item,
             status: 'added',
-            reason: bestMatch.reason, // include reason from AI
-          });
+            reason: bestMatch.reason,
+            productName: bestMatch?.name || '',
+            href: bestMatch?.href || '',
+            price: bestMatch?.price || ''
+          });          
         } else {
           result.push({
-            name: item.name,
-            quantity: item.quantity,
+            item: item,
             status: 'not_added',
             suggestions: ['Add to Cart button not found or failed to click.'],
-            reason: bestMatch.reason,
+            reason: bestMatch.reason
           });
         }
         
       } catch (err) {
         console.error(`❌ Automation failed for ${item.name}:`, err);
         result.push({
-          name: item.name,
-          quantity: item.quantity,
+          item: item,
           status: 'error',
           error: (err as Error).message,
         });
@@ -125,6 +147,9 @@ app.post('/api/submit-groceries', async (req, res) => {
   } catch (err) {
     console.error('❌ Unexpected error during automation:', err);
     res.status(500).json({ error: 'Internal automation error', details: err });
+  } finally {
+    await new Promise(r => setTimeout(r, 10000));
+    browser?.close()
   }
 });
 

@@ -4,7 +4,7 @@ import { z } from 'zod';
 dotenv.config();
 
 const GeminiResponseSchema = z.object({
-  index: z.number().min(1),
+  index: z.number().min(0),
   reason: z.string(),
 });
 
@@ -45,6 +45,12 @@ export async function askAIForBestMatch({
      - For example, if the product is a *bag of 8 apples* and the user wants 4, that may result in over-purchasing.
      - Prefer individual items or smaller packs if available.
   
+  🚫 If NONE of the results are appropriate or relevant to the item "${itemName}", then return:
+  {
+    "index": 0,
+    "reason": "No relevant product found in the list."
+  }
+  
   📦 Product Results:
   Top ${productList.length} results:
   ${productList
@@ -60,32 +66,49 @@ export async function askAIForBestMatch({
   🧠 Return a valid JSON object in this **strict format** (no markdown or comments):
   
   {
-    "index": number,    // A number between 1 and ${productList.length}
-    "reason": "string"  // Short explanation why this item was selected
+    "index": number,    // A number between 1 and ${productList.length}, or 0 if no match found
+    "reason": "string"  // Short explanation why this item was selected or why no match was found
   }
   
   ⚠️ Do not return multiple products. Do not include explanations outside of the JSON object.
-  ⚠️ Make sure the index is valid and within the range 1 to ${productList.length}.
-  `;
+  ⚠️ Make sure the index is valid and within the range 1 to ${productList.length}, or use 0 if nothing fits.
+  `;  
   
   
   try {
     const result = await model.generateContent(prompt);
     let raw = result.response.text().trim();
-
+  
+    // Remove markdown block if present
     if (raw.startsWith('```json')) {
       raw = raw.replace(/^```json/, '').replace(/```$/, '').trim();
     }
-
+  
     const parsed = JSON.parse(raw);
     const validated = GeminiResponseSchema.parse(parsed);
-
+  
     const matchIndex = validated.index;
+  
+    // ✅ If no match was found (index = 0)
+    if (matchIndex === 0) {
+      console.warn(`⚠️ Gemini returned index 0: ${validated.reason}`);
+      return {
+        name: itemName,
+        href: '',
+        brand: '',
+        price: '',
+        reason: validated.reason,
+        skipped: true,
+      };
+    }
+  
+    // ❌ If index is out of range
     if (matchIndex < 1 || matchIndex > productList.length) {
       console.warn(`⚠️ AI returned out-of-range index: ${matchIndex}`);
       return null;
     }
-
+  
+    // ✅ Valid match
     return {
       ...productList[matchIndex - 1],
       reason: validated.reason,
@@ -94,4 +117,5 @@ export async function askAIForBestMatch({
     console.error('❌ Gemini reasoning error:', err);
     return null;
   }
+  
 }
