@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { PlusCircle, ShoppingCart, Brain, X, ChevronRight, Leaf } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Brain, X, ChevronRight, Leaf, CircleDollarSign } from 'lucide-react';
 
 type GroceryItem = {
   name: string;
@@ -14,14 +14,17 @@ type GroceryItem = {
 };
 
 type Result = {
-  name: string;
-  quantity: number;
-  status: 'added' | 'failed';
+  item: GroceryItem
+  status: 'added' | 'skipped' | 'not_added' | 'error';
   reason?: string;
+  productName?: string;
+  href?: string;
+  price?: string;
   suggestions?: string[];
 }
 
 export const GroceryInput = () => {
+  const [automationConsent, setAutomationConsent] = useState(false);
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -136,7 +139,8 @@ export const GroceryInput = () => {
                   onChange={(e) => setLowestPrice(e.target.checked)}
                   className="rounded text-green-500 focus:ring-green-500 cursor-pointer"
                 />
-                <span>Lowest price</span>
+                <span className="flex items-center">
+                  <CircleDollarSign className="w-4 h-4 mr-1 text-orange-500" />Lowest Price</span>
               </label>
             </div>
 
@@ -181,7 +185,10 @@ export const GroceryInput = () => {
                         <span className="inline-block mr-3">Origin: {item.preferences.country}</span>
                       )}
                       {item.preferences.lowestPrice && (
-                        <span className="inline-block">Lowest price preferred</span>
+                        <span className="inline-flex items-center mr-3">
+                          <CircleDollarSign className="w-4 h-4 mr-1 text-orange-500" />
+                          Lowest price preferred
+                        </span>
                       )}
                     </div>
                   </div>
@@ -193,14 +200,48 @@ export const GroceryInput = () => {
                   </button>
                 </div>
               ))}
-              
-              <button
-                onClick={submitItems}
-                className="w-full mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors duration-200"
-              >
-                <Brain className="w-5 h-5" />
-                <span>Start AI Shopping</span>
-              </button>
+
+              <div className="mt-4 space-y-2 border p-3 rounded bg-yellow-50 cursor-pointer transform transition-transform duration-300 ease-in-out hover:scale-105" 
+                onClick={() => setAutomationConsent(!automationConsent)}>
+                <label className="flex items-start space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={automationConsent}
+                    onChange={(e) => setAutomationConsent(e.target.checked)}
+                    className="mt-1 rounded text-green-500 focus:ring-green-500 cursor-pointer"
+                  />
+                  <span className="text-sm">
+                    I allow this app to run automation on my Amazon account to add groceries to my cart.
+                  </span>
+                </label>
+                <div className="text-xs text-gray-600 pl-6">
+                  ⚠️ This automation <strong>does not purchase</strong> anything. It only:
+                  <ul className="list-disc list-inside mt-1 pl-5">
+                    <li>Searches for your selected items</li>
+                    <li>Adds matching items to your Amazon cart</li>
+                    <li>Shows product suggestions based on your preferences</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex flex-row gap-5 mt-6">
+                <button
+                  onClick={() => window.open('https://www.amazon.com/gp/cart/view.html?ref_=nav_cart', '_blank')}
+                  className="w-full border-2 border-gray-300 bg-white text-gray-700 px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-gray-50 hover:border-gray-400 transition-colors duration-200"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  <span>Go to Shopping Cart</span>
+                </button>
+                
+                <button
+                  onClick={submitItems}
+                  disabled={!automationConsent}
+                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Brain className="w-5 h-5" />
+                  <span>Start AI Shopping</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -218,15 +259,59 @@ export const GroceryInput = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="font-medium text-gray-800">
-                        {r.name} × {r.quantity}
-                      </div>
-                      <div className="mt-1 text-sm">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {/* Show requested item details */}
+                        <div className="flex flex-row items-center">
+                          <span>Requested: {r.item?.name} × {r.item?.quantity}</span>
+                          {r.status !== 'added' &&  (
+                            <span className={`inline-flex items-center ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              r.status === 'skipped' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
                           {r.status}
                         </span>
+                        )}
+                          {(r.item?.preferences?.organic) && (
+                            <span className="inline-flex items-center ml-2">
+                              <Leaf className="w-4 h-4 mr-1 text-green-500" />
+                              Organic
+                            </span>
+                          )}
+                          {(r.item?.preferences?.lowestPrice) && (
+                            <span className="inline-flex items-center ml-2">
+                              <CircleDollarSign className="w-4 h-4 mr-1 text-orange-500" />
+                              Lowest Price
+                            </span>
+                          )}
+                        </div>
+                        <div className="mb-2 flex flex-row items-center">
+                          {(r.item?.preferences?.brand) && (
+                            <span className="font-medium">Brand: {r.item?.preferences?.brand}</span>
+                          )}
+                          {(r.item?.preferences?.country) && (
+                            <span className="font-medium">Origin: {r.item?.preferences?.country}</span>
+                          )}
+                        </div>
+                        {/* Show matched product details if available */}
+                        {r.status === 'added' && r.productName && (
+                          <div className="text-green-700">
+                            Found: {r.productName} {r.price && `- ${r.price}`}
+                            <span className='inline-flex items-center ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800'>
+                              {r.status}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    {r.href && (
+                      <a
+                        href={r.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 hover:bg-gray-200 rounded-full transition-colors duration-200"
+                      >
+                        <ChevronRight className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+                      </a>
+                    )}
                   </div>
                   
                   {r.reason && (
