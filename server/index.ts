@@ -17,11 +17,18 @@ dotenv.config();
 const app = express();
 const PORT = 4000;
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://ai-wholefoods-agent.vercel.app/', 
+  methods: ['GET', 'POST'],
+}));
 app.use(bodyParser.json());
 
 // Set Puppeteer user data dir
 const userDataDir = path.join(__dirname, 'user-data');
+
+app.get('/', (req, res) => {
+  res.send('Welcome to the API');
+});
 
 app.post('/api/submit-groceries', async (req, res) => {
   const items: GroceryItem[] = req.body.items;
@@ -30,6 +37,8 @@ app.post('/api/submit-groceries', async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      ignoreDefaultArgs: ['--disable-extensions'],
       headless: false,
       userDataDir,
       defaultViewport: null,

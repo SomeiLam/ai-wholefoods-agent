@@ -72,7 +72,7 @@ export const GroceryInput = () => {
       setIsFetching(true)
       setResult([])
       const res = await axios.post(
-        'http://localhost:4000/api/submit-groceries',
+        `${import.meta.env.VITE_API_URL}/api/submit-groceries`,
         {
           items,
         }
