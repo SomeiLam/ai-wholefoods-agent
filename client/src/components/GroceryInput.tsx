@@ -6,6 +6,9 @@ import ShoppingList from './ShoppingList'
 import AIResult from './AIResult'
 import { GroceryItem, Result } from '../types'
 
+// const apiUrl = import.meta.env.API_URL
+const apiUrl = 'http://localhost:4000'
+
 export const GroceryInput = () => {
   const [automationConsent, setAutomationConsent] = useState(false)
   const [items, setItems] = useState<GroceryItem[]>([])
@@ -67,16 +70,14 @@ export const GroceryInput = () => {
   }
 
   const submitItems = async () => {
+    setError(null)
     if (items.length === 0) return
     try {
       setIsFetching(true)
       setResult([])
-      const res = await axios.post(
-        `${import.meta.env.API_URL}/api/submit-groceries`,
-        {
-          items,
-        }
-      )
+      const res = await axios.post(`${apiUrl}/api/submit-groceries`, {
+        items,
+      })
       setResult(res.data.result)
     } catch (error) {
       setError(

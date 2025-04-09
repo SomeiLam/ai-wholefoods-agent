@@ -17,10 +17,7 @@ dotenv.config();
 const app = express();
 const PORT = 4000;
 
-app.use(cors({
-  origin: 'https://ai-wholefoods-agent.vercel.app/', 
-  methods: ['GET', 'POST'],
-}));
+app.use(cors());
 app.use(bodyParser.json());
 
 // Set Puppeteer user data dir
@@ -77,12 +74,15 @@ app.post('/api/submit-groceries', async (req, res) => {
         if (item.preferences.country) enhancedQuery += ` from ${item.preferences.country}`;
         if (item.preferences.lowestPrice) enhancedQuery += ' cheapest';
 
-        const searchUrl = `https://www.amazon.com/s?k=${encodeURIComponent(enhancedQuery)}&i=wholefoods`;
-        await page.goto(searchUrl, { waitUntil: 'networkidle2' });
         const searchResults = await searchAmazon(page, enhancedQuery);
 
         if (searchResults.length === 0) {
-          throw new Error('No search results found.');
+          result.push({
+            item: item,
+            status: 'skipped',
+            reason: 'No search results found',
+          });
+          continue;
         }
 
         // Step 2: AI picks the best product
@@ -157,7 +157,7 @@ app.post('/api/submit-groceries', async (req, res) => {
     console.error('❌ Unexpected error during automation:', err);
     res.status(500).json({ error: 'Internal automation error', details: err });
   } finally {
-    await new Promise(r => setTimeout(r, 10000));
+    await new Promise(r => setTimeout(r, 1000));
     browser?.close()
   }
 });
