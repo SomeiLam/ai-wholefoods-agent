@@ -6,8 +6,8 @@ import ShoppingList from './ShoppingList'
 import AIResult from './AIResult'
 import { GroceryItem, Result } from '../types'
 
-// const apiUrl = import.meta.env.API_URL
-const apiUrl = 'http://localhost:4000'
+const apiUrl = import.meta.env.API_URL
+// const apiUrl = 'http://localhost:4000'
 
 export const GroceryInput = () => {
   const [automationConsent, setAutomationConsent] = useState(false)
