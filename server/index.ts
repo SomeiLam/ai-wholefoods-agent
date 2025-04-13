@@ -15,7 +15,7 @@ import { checkIfLoggedIn } from './utils/checkIfLoggedIn';
 dotenv.config();
 
 const app = express();
-const PORT = 4000;
+const PORT = 80;
 
 app.use(cors());
 app.use(bodyParser.json());
