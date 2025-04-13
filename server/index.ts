@@ -34,12 +34,20 @@ app.post('/api/submit-groceries', async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: true,  // Run in headless mode
+      executablePath: '/path/to/your/chromium',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',           // Disable GPU hardware acceleration
+        '--window-size=1280x1024', // Set a default window size (you can customize)
+        '--remote-debugging-port=9222' // Enable remote debugging if needed for troubleshooting
+      ],
       ignoreDefaultArgs: ['--disable-extensions'],
-      headless: false,
       userDataDir,
       defaultViewport: null,
     });
+    
 
     const [page] = await browser.pages();
     await page.goto('https://www.amazon.com/wholefoods');

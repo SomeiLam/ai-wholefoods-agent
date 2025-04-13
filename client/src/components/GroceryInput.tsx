@@ -6,9 +6,6 @@ import ShoppingList from './ShoppingList'
 import AIResult from './AIResult'
 import { GroceryItem, Result } from '../types'
 
-const apiUrl = import.meta.env.API_URL
-// const apiUrl = 'http://localhost:4000'
-
 export const GroceryInput = () => {
   const [automationConsent, setAutomationConsent] = useState(false)
   const [items, setItems] = useState<GroceryItem[]>([])
@@ -24,6 +21,9 @@ export const GroceryInput = () => {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Result[]>([])
 
+  const apiUrl = import.meta.env.VITE_API_URL
+  // const apiUrl = 'http://localhost:4000'
+  console.log(`API URL: ${apiUrl}`)
   const handleUpdateItem = (
     field: keyof typeof tempItem,
     value: string | number | boolean
