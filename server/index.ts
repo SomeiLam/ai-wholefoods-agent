@@ -35,7 +35,7 @@ app.post('/api/submit-groceries', async (req, res) => {
   try {
     browser = await puppeteer.launch({
       headless: true,  // Run in headless mode
-      executablePath: '/path/to/your/chromium',
+      executablePath: '/usr/bin/chromium-browser',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
