@@ -21,7 +21,9 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Set Puppeteer user data dir
-const userDataDir = path.join(__dirname, 'user-data');
+// const userDataDir = path.join(__dirname, 'user-data');
+
+const userDataDir = `/tmp/puppeteer_user_data_${Date.now()}`;
 
 app.get('/', (req, res) => {
   res.send('Welcome to the API');
